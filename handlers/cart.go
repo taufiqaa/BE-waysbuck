@@ -18,9 +18,6 @@ type handlerCart struct {
 	CartRepository repositories.CartRepository
 }
 
-// Create `path_file` Global variable here ...
-var path_file_cart = "http://localhost:2500/uploads/"
-
 func HandlerCart(CartRepository repositories.CartRepository) *handlerCart {
 	return &handlerCart{CartRepository}
 }
@@ -136,10 +133,6 @@ func (h *handlerCart) FindCartId(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for i, p := range cart {
-		cart[i].Product.Image = path_file_cart + p.Product.Image
-	}
-
 	w.WriteHeader(http.StatusOK)
 	response := dto.SuccessResult{Status: "Success", Data: cart}
 	json.NewEncoder(w).Encode(response)
@@ -211,27 +204,5 @@ func (h *handlerCart) UpdateCartTransaction(w http.ResponseWriter, r *http.Reque
 
 // 	w.WriteHeader(http.StatusOK)
 // 	response := dto.SuccessResult{Status: "success", Data: data}
-// 	json.NewEncoder(w).Encode(response)
-// }
-
-// func (h *handlerCart) FindCartsByID(w http.ResponseWriter, r *http.Request) {
-// 	w.Header().Set("Content-Type", "application/json")
-
-// 	userInfo := r.Context().Value("userInfo").(jwt.MapClaims)
-// 	id_user := int(userInfo["id"].(float64))
-
-// 	cart, err := h.CartRepository.FindCartsByID(id_user)
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		response := dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()}
-// 		json.NewEncoder(w).Encode(response)
-// 	}
-
-// 	for i, p := range cart {
-// 		cart[i].Product.Image = path_file_cart + p.Product.Image
-// 	}
-
-// 	w.WriteHeader(http.StatusOK)
-// 	response := dto.SuccessResult{Status: "Success", Data: cart}
 // 	json.NewEncoder(w).Encode(response)
 // }

@@ -2,15 +2,19 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	productdto "waysbuck-API/dto/product"
 	dto "waysbuck-API/dto/result"
 	"waysbuck-API/models"
 	"waysbuck-API/repositories"
 
-	// "github.com/cloudinary/cloudinary-go/v2"
-	// "github.com/cloudinary/cloudinary-go/v2/api/uploader"
+	"context"
+
+	"github.com/cloudinary/cloudinary-go/v2"
+	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 )
@@ -19,7 +23,7 @@ type handlerProduct struct {
 	ProductRepository repositories.ProductRepository
 }
 
-var product_path_file = "http://localhost:2500/uploads/"
+// var product_path_file = "http://localhost:2500/uploads/"
 
 func HandlerProduct(ProductRepository repositories.ProductRepository) *handlerProduct {
 	return &handlerProduct{ProductRepository}
@@ -34,11 +38,6 @@ func (h *handlerProduct) FindProducts(w http.ResponseWriter, r *http.Request) {
 		response := dto.ErrorResult{Code: http.StatusBadRequest, Message: err.Error()}
 		json.NewEncoder(w).Encode(response)
 		return
-	}
-
-	// Create Embed Path File on Image property here ...
-	for i, p := range products {
-		products[i].Image = product_path_file + p.Image
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -60,9 +59,6 @@ func (h *handlerProduct) GetProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create Embed Path File on Image property here ...
-	product.Image = product_path_file + product.Image
-
 	w.WriteHeader(http.StatusOK)
 	response := dto.SuccessResult{Status: "success", Data: product}
 	json.NewEncoder(w).Encode(response)
@@ -71,14 +67,14 @@ func (h *handlerProduct) GetProduct(w http.ResponseWriter, r *http.Request) {
 func (h *handlerProduct) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	dataContex := r.Context().Value("dataFile") // add this code
-	filename := dataContex.(string)             // add this code
+	dataContex := r.Context().Value("dataFile")
+	filepath := dataContex.(string)
 
 	price, _ := strconv.Atoi(r.FormValue("price"))
 	request := productdto.ProductRequest{
 		Title: r.FormValue("title"),
 		Price: price,
-		Image: filename,
+		Image: filepath,
 	}
 
 	validation := validator.New()
@@ -90,10 +86,25 @@ func (h *handlerProduct) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var ctx = context.Background()
+	var CLOUD_NAME = os.Getenv("CLOUD_NAME")
+	var API_KEY = os.Getenv("API_KEY")
+	var API_SECRET = os.Getenv("API_SECRET")
+
+	// Add your Cloudinary credentials ...
+	cld, _ := cloudinary.NewFromParams(CLOUD_NAME, API_KEY, API_SECRET)
+
+	// Upload file to Cloudinary ...
+	resp, err := cld.Upload.Upload(ctx, filepath, uploader.UploadParams{Folder: "waysbuck"})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
 	product := models.Product{
 		Title: request.Title,
 		Price: request.Price,
-		Image: filename,
+		Image: resp.SecureURL,
 	}
 
 	// err := mysql.DB.Create(&product).Error
@@ -116,14 +127,14 @@ func (h *handlerProduct) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	dataContex := r.Context().Value("dataFile")
-	filename := dataContex.(string)
+	filepath := dataContex.(string)
 
 	price, _ := strconv.Atoi(r.FormValue("price"))
 
 	request := productdto.ProductRequest{
 		Title: r.FormValue("title"),
 		Price: price,
-		Image: filename,
+		Image: filepath,
 	}
 
 	validation := validator.New()
@@ -136,14 +147,28 @@ func (h *handlerProduct) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var ctx = context.Background()
+	var CLOUD_NAME = os.Getenv("CLOUD_NAME")
+	var API_KEY = os.Getenv("API_KEY")
+	var API_SECRET = os.Getenv("API_SECRET")
+
+	// Add your Cloudinary credentials ...
+	cld, _ := cloudinary.NewFromParams(CLOUD_NAME, API_KEY, API_SECRET)
+
+	resp, err := cld.Upload.Upload(ctx, filepath, uploader.UploadParams{Folder: "waysbeans"})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
 	id, _ := strconv.Atoi(mux.Vars(r)["id"])
 	product, _ := h.ProductRepository.GetProduct(id)
-
 	product.Title = request.Title
 	product.Price = request.Price
+	product.Image = resp.SecureURL
 
-	if filename != "false" {
-		product.Image = filename
+	if filepath != "false" {
+		product.Image = resp.SecureURL
 	}
 
 	product, err = h.ProductRepository.UpdateProduct(product)
