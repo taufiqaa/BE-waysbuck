@@ -94,7 +94,7 @@ func (h *handlerTopping) CreateTopping(w http.ResponseWriter, r *http.Request) {
 
 	cld, _ := cloudinary.NewFromParams(CLOUD_NAME, API_KEY, API_SECRET)
 
-	resp, err := cld.Upload.Upload(ctx, filepath, uploader.UploadParams{Folder: "waysbuck"})
+	resp, err := cld.Upload.Upload(ctx, filepath, uploader.UploadParams{Folder: "waysbuck-new"})
 
 	if err != nil {
 		fmt.Println(err.Error())
